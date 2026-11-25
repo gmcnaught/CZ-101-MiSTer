@@ -5,6 +5,10 @@ firmware on a uPD7811 with the uPD933 sound chip, the HD44780 LCD and the batter
 Every part is written from MAME's `cz101` driver (BSD-3-Clause) and checked against a patched
 MAME in lockstep, instruction for instruction and sample for sample. No ROMs are included.
 
+![Front panel on the MiSTer screen](docs/panel.png)
+
+The MiSTer screen: the front panel from MAME's `cz101.lay` with the LCD above it. The LEDs (including the tone and envelope matrices) are lit by the firmware, buttons show pressed while their key is held, and each cap shows its keyboard key.
+
 ## Source
 
 The source, the tests and the design notes are in [gmcnaught/synthcores](https://github.com/gmcnaught/synthcores) under
@@ -21,7 +25,7 @@ The source, the tests and the design notes are in [gmcnaught/synthcores](https:/
 | Panel keys, pitch wheel, MIDI out | `tests/c4_run.sh tests/midi/basic.txt 6500000 tests/panel/basic.txt`: the same, plus tone selection and pitch-wheel moves at the same CPU cycles in MAME and the HDL | trace and 717,228 samples identical, SHA-256 472320fd…08a9; the 63 MIDI-out bytes (program changes, the wheel's pitch bends) identical, each within 19 CPU cycles of MAME's |
 | Battery RAM across a reload | `tests/reload_run.sh`: write preset 3 into internal tone 2 (`tests/panel/write.txt`), restart from that RAM, select internal tone 2 | the tone is kept; the firmware's tone buffers (0300-03FF) equal those with preset 3 selected |
 | Pitch wheel | `tests/c4_run.sh tests/midi/basic.txt 6500000 tests/panel/wheel.txt`: five wheel moves during a held note | trace and 716,620 samples identical to MAME, SHA-256 4fd2c703…9035 (the sound-chip writes first differ from the plain run 4 ms after the first move) |
-| Quartus (Windows build host) | `winbuild.sh cz101` | 14,577 ALMs (35 %), 37 DSP; timing met (core clock setup slack +4.13 ns at 50 MHz) |
+| Quartus (release build) | `build-rbf.yml`, Quartus Lite 17.0 | 14,646 ALMs (35 %), 209 RAM blocks, 38 DSP; timing met (setup slack: core clock +3.919 ns, HDMI +0.122 ns) |
 | MiSTer | `scripts/mister/smoke.sh` | boots to PRESET NO.01; MIDI over the UART changes the patch; a panel key works; selecting a tone sends its program change out of the UART (read on `/dev/ttyS1` at 31,250 baud); no underrun; a tone written to internal memory (Write held, Internal, Tone 2) is in the 8 KB save file, survives a reload of the core and plays again when selected |
 
 The plan, the timing rules and the open items are in [`docs/plan.md`](https://github.com/gmcnaught/synthcores/blob/main/cores/cz101/docs/plan.md); the CPU
@@ -46,7 +50,9 @@ notes and the MAME flag bugs found on the way are in [`docs/upd7810.md`](https:/
    40 kHz samples go through a 960-tap polyphase filter (flat to 18 kHz, images at or below
    -92 dB), so the HDMI and analog outputs carry no 40 kHz images.
 
-The status strip under the LCD (synthframe's, as on the SC-55 and JV-880) shows the core's
+The screen shows the front panel (MAME's `cz101.lay`) with the LCD above it: the firmware lights
+its LEDs, and buttons show pressed while their keys are held. The status strip at the bottom
+(synthframe's, as on the SC-55 and JV-880) shows the core's
 state (green running, amber loading, red no ROM pack), MIDI activity, and an audio underrun
 indicator (dark red once an underrun was seen).
 
