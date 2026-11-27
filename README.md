@@ -22,11 +22,11 @@ The source, the tests and the design notes are in [gmcnaught/synthcores](https:/
 | uPD7811 peripherals | 160 random programs (timers, serial, interrupts, HLT) | identical, 309,527 interrupt entries |
 | uPD933 | standalone copy of MAME's model on synthetic stimuli | identical |
 | Board | `tests/c4_run.sh tests/midi/basic.txt 6500000`: real firmware, boot and MIDI playback | 6.5 M instructions (17.9 s) and 716,728 samples identical to MAME, SHA-256 08745dc2…0eb7; the same through the MiSTer's live-MIDI path |
-| Panel keys, pitch wheel, MIDI out | `tests/c4_run.sh tests/midi/basic.txt 6500000 tests/panel/basic.txt`: the same, plus tone selection and pitch-wheel moves at the same CPU cycles in MAME and the HDL | trace and 717,228 samples identical, SHA-256 472320fd…08a9; the 63 MIDI-out bytes (program changes, the wheel's pitch bends) identical, each within 19 CPU cycles of MAME's |
+| Panel keys, pitch wheel, MIDI out | `tests/c4_run.sh tests/midi/basic.txt 6500000 tests/panel/basic.txt`: the same, plus tone selection and pitch-wheel moves at the same CPU cycles in MAME and the HDL | trace and 717,228 samples identical, SHA-256 472320fd…08a9; the 63 MIDI-out bytes (program changes, the wheel's pitch bends) identical, each within 19 CPU cycles of MAME's; the bytes the MiSTer sends (`CZ_TX_BYTES`) identical, each loaded at the serial clock edge one bit before MAME's start bit |
 | Battery RAM across a reload | `tests/reload_run.sh`: write preset 3 into internal tone 2 (`tests/panel/write.txt`), restart from that RAM, select internal tone 2 | the tone is kept; the firmware's tone buffers (0300-03FF) equal those with preset 3 selected |
 | Pitch wheel | `tests/c4_run.sh tests/midi/basic.txt 6500000 tests/panel/wheel.txt`: five wheel moves during a held note | trace and 716,620 samples identical to MAME, SHA-256 4fd2c703…9035 (the sound-chip writes first differ from the plain run 4 ms after the first move) |
-| Quartus (release build) | `build-rbf.yml`, Quartus Lite 17.0 | 14,646 ALMs (35 %), 209 RAM blocks, 38 DSP; timing met (setup slack: core clock +3.919 ns, HDMI +0.122 ns) |
-| MiSTer | `scripts/mister/smoke.sh` | boots to PRESET NO.01; MIDI over the UART changes the patch; a panel key works; selecting a tone sends its program change out of the UART (read on `/dev/ttyS1` at 31,250 baud); no underrun; a tone written to internal memory (Write held, Internal, Tone 2) is in the 8 KB save file, survives a reload of the core and plays again when selected |
+| Quartus (release build) | `winbuild.sh`, Quartus Lite 17.0 on the Windows build host (v20261127) | 14,771 ALMs (35 %), 218 RAM blocks, 38 DSP; timing met (setup slack: core clock +4.660 ns, HDMI +0.651 ns) |
+| MiSTer | `scripts/mister/smoke.sh` | boots to PRESET NO.01; MIDI over the UART changes the patch; a panel key works; selecting a tone sends its program change out of the UART (read on `/dev/ttyS1` at 9600 baud, the speed the smoke's MIDI in used); no underrun; a tone written to internal memory (Write held, Internal, Tone 2) is in the 8 KB save file, survives a reload of the core and plays again when selected |
 
 The plan, the timing rules and the open items are in [`docs/plan.md`](https://github.com/gmcnaught/synthcores/blob/main/cores/cz101/docs/plan.md); the CPU
 notes and the MAME flag bugs found on the way are in [`docs/upd7810.md`](https://github.com/gmcnaught/synthcores/blob/main/cores/cz101/docs/upd7810.md).
@@ -42,8 +42,8 @@ notes and the MAME flag bugs found on the way are in [`docs/upd7810.md`](https:/
 3. **MIDI:** set the UART to MidiLink and route MidiLink to the UART (not to FluidSynth). The
    CZ-101 receives on the channel set with its MIDI button. Program change n selects preset
    n + 1 (the test corpus's program change 14 shows PRESET NO.15). MIDI out (tone selection,
-   the pitch wheel) leaves through the UART's TX at 31,250 baud (the smoke test reads it back
-   on the MiSTer's `/dev/ttyS1`).
+   the pitch wheel) leaves through the UART's TX at 31,250 baud, or 9600 once MIDI in arrives at 9600 (the
+   smoke test reads it back on the MiSTer's `/dev/ttyS1`).
 4. **Pitch wheel:** the first joystick's Y axis (up raises the pitch), or its up/down
    directions for full bend. The firmware bends its own voices and sends pitch bend on MIDI out.
 5. **Output gain (OSD):** 0 to +18 dB, saturating. The output runs at 96 kHz: the chip's
